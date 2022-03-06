@@ -6,9 +6,9 @@ Convert XLA to ONNX.
 
 TODO
 - [x] MNIST
-- [ ] Python package
 - [ ] Resnet(JAX)
 - [ ] MNIST(TensorFlow)
 - [ ] Resnet50(TensorFlow)
+- [ ] Python package
 - [ ] [brax](https://github.com/google/brax)
 - [ ] General reduction support (not using ReduceSum/ReduceMax)
