@@ -1,0 +1,9 @@
+hlo_proto
+*_as_hlo_text.txt
+*_hlo_proto.txt
+*.hlo_proto
+*_as_hlo_dot_graph.dot
+*_as_hlo_dot_graph.ps
+*.onnx
+__pycache__
+myenv
