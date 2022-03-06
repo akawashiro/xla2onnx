@@ -2,15 +2,14 @@ import subprocess
 import sys
 from typing import Any, List, Optional, Tuple, Union
 
+import jax
+import jax.numpy as jnp
 import numpy as np
 import onnx
 import onnxruntime as ort
 import pytest
-from onnx import AttributeProto, GraphProto, TensorProto, TypeProto, helper
-
-import jax
-import jax.numpy as jnp
 from jax import grad, jit, vmap
+from onnx import AttributeProto, GraphProto, TensorProto, TypeProto, helper
 
 sys.path.append("hlo_proto")  # nopep8
 

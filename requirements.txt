@@ -3,3 +3,7 @@ numpy
 onnx
 onnxruntime
 jax[cpu]
+isort
+mypy
+black
+autopep8
