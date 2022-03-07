@@ -12,3 +12,4 @@ TODO
 - [ ] Python package
 - [ ] [brax](https://github.com/google/brax)
 - [ ] General reduction support (not using ReduceSum/ReduceMax)
+- [ ] license
