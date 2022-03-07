@@ -81,3 +81,14 @@ def translate_and_run(fn, input_values, test_name):
 
     outputs = ort_sess.run(None, inputs)
     return outputs
+
+
+def check_output(out1, out2, rtol=1e-05, atol=1e-08):
+    # TODO: Fix these values. Maybe incorrect.
+    suggest_atol = np.max(np.abs(out1 - out2))
+    rd = np.abs(out1 - out2) / np.abs(out2)
+    suggest_rtol = np.max(rd[~np.isnan(rd)])
+
+    assert np.allclose(
+        out1, out2, rtol=rtol, atol=atol
+    ), f"suggest_rtol = {suggest_rtol} suggest_atol = {suggest_atol}"

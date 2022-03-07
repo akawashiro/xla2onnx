@@ -22,7 +22,7 @@ sys.path.append("hlo_proto")  # nopep8
 import hlo_pb2  # nopep8
 import xla_data_pb2  # nopep8
 
-from utils_for_test import translate_and_run
+from utils_for_test import check_output, translate_and_run
 
 
 def test_mnist():
@@ -41,13 +41,7 @@ def test_mnist():
     output_values = fn(*input_values)
     outputs = translate_and_run(fn, input_values, test_name)
 
-    atol = np.max(np.abs(output_values - outputs[0]))
-    rd = np.abs(output_values - outputs[0]) / np.abs(outputs[0])
-    rtol = np.max(rd[~np.isnan(rd)])
-
-    assert np.allclose(
-        output_values, outputs[0], rtol=1e-3
-    ), f"atol = {atol} rtol = {rtol}"
+    check_output(output_values, outputs[0])
 
 
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
@@ -62,7 +56,8 @@ def test_add(shape):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0])
 
 
 # TODO: Test axis
@@ -77,7 +72,8 @@ def test_sum(shape):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0], rtol=1e-4)
 
 
 # TODO: Test axis
@@ -92,7 +88,8 @@ def test_reduce_max(shape):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0])
 
 
 @pytest.mark.parametrize("shapes", [((32, 32), (32,)), ((64, 32, 32), (32,))])
@@ -107,7 +104,8 @@ def test_add_broadcast(shapes):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0])
 
 
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
@@ -122,7 +120,8 @@ def test_sub(shape):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0])
 
 
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
@@ -137,7 +136,8 @@ def test_max(shape):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0])
 
 
 @pytest.mark.parametrize(
@@ -161,7 +161,8 @@ def test_dot(shapes):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0], rtol=1e-4)
+
+    check_output(output_values, outputs[0], rtol=1e-3)
 
 
 @pytest.mark.parametrize("shape", [(2, 3)])
@@ -177,7 +178,8 @@ def test_constant(shape):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0])
 
 
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
@@ -191,7 +193,8 @@ def test_exp(shape):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0])
 
 
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
@@ -204,7 +207,8 @@ def test_log(shape):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0])
 
 
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
@@ -222,7 +226,8 @@ def test_add_exp(shape):
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
-    assert np.allclose(output_values, outputs[0])
+
+    check_output(output_values, outputs[0])
 
 
 # Copied from onnx/backend/test/case/node/__init__.py
