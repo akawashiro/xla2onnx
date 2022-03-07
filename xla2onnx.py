@@ -102,6 +102,10 @@ def t_instruction(
         inputs = list(map(lambda x: str(x), instruction.operand_ids))
         node = helper.make_node("Add", inputs, [str(instruction.id)])
         return [(str(instruction.id), None, node)]
+    elif instruction.opcode == "divide":
+        inputs = list(map(lambda x: str(x), instruction.operand_ids))
+        node = helper.make_node("Div", inputs, [str(instruction.id)])
+        return [(str(instruction.id), None, node)]
     elif instruction.opcode == "subtract":
         inputs = list(map(lambda x: str(x), instruction.operand_ids))
         node = helper.make_node("Sub", inputs, [str(instruction.id)])
