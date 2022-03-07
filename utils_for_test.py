@@ -84,6 +84,8 @@ def translate_and_run(fn, input_values, test_name):
 
 
 def check_output(out1, out2, rtol=1e-05, atol=1e-08):
+    assert out1.size == out2.size
+
     # TODO: Fix these values. Maybe incorrect.
     suggest_atol = np.max(np.abs(out1 - out2))
     rd = np.abs(out1 - out2) / np.abs(out2)

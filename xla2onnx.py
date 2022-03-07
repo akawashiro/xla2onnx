@@ -304,6 +304,64 @@ def t_instruction(
             node = helper.make_node("ReduceMax", inputs, [str(instruction.id)])
             return [(str(instruction.id), None, node)]
         raise RuntimeError()
+    elif instruction.opcode == "convolution":
+        # TODO: We assume the first input is given in NHWC and the second input
+        # is given in OIHW. So we must transpose the first one to NCHW.
+        assert len(instruction.operand_ids) == 2
+        image = str(instruction.operand_ids[0])
+        weight = str(instruction.operand_ids[1])
+
+        transpose_image_id = gensym("convolution_transpose_image_")
+        transpose_image_node = onnx.helper.make_node(
+            "Transpose",
+            inputs=[image],
+            outputs=[transpose_image_id],
+            perm=np.array([0, 3, 1, 2]),
+        )
+
+        assert len(instruction.window.dimensions) == 2
+        kernel_shape = [
+            instruction.window.dimensions[0].size,
+            instruction.window.dimensions[1].size,
+        ]
+        strides = [
+            instruction.window.dimensions[0].stride,
+            instruction.window.dimensions[1].stride,
+        ]
+        # TODO: Maybe incorrect
+        # assert instruction.window.dimensions[0].padding_high == instruction.window.dimensions[0].padding_low
+        pads = [
+            instruction.window.dimensions[0].padding_low,
+            instruction.window.dimensions[1].padding_low,
+            instruction.window.dimensions[0].padding_high,
+            instruction.window.dimensions[1].padding_high,
+        ]
+
+        convolution_output_id = gensym("convolution_output_")
+        convolution_node = onnx.helper.make_node(
+            "Conv",
+            inputs=[transpose_image_id, weight],
+            outputs=[convolution_output_id],
+            kernel_shape=kernel_shape,
+            strides=strides,
+            pads=pads,
+        )
+
+        # The output is NCHW. So we must transpose it again.
+        # NCHW -> NHWC
+        transpose_output_id = gensym("convolution_transpose_output_")
+        transpose_output_node = onnx.helper.make_node(
+            "Transpose",
+            inputs=[convolution_output_id],
+            outputs=[str(instruction.id)],
+            perm=np.array([0, 2, 3, 1]),
+        )
+
+        return [
+            (transpose_image_id, None, transpose_image_node),
+            (convolution_output_id, None, convolution_node),
+            (transpose_output_id, None, transpose_output_node),
+        ]
     else:
         raise RuntimeError(instruction.opcode + " is not supported yet!")
 
