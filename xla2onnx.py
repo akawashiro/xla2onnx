@@ -17,22 +17,28 @@ import hlo_pb2  # nopep8
 import xla_data_pb2  # nopep8
 
 
+# TODO: Remove workaround of type annotation
+# https://stackoverflow.com/questions/63893782/python3-raising-attribute-error-on-type-annotation
 def translate_dtype(
-    element_type: xla_data_pb2.PrimitiveType.ValueType,
+    element_type: "xla_data_pb2.PrimitiveType.ValueType",
 ) -> Any:
     assert element_type in [xla_data_pb2.F32]
     if element_type == xla_data_pb2.F32:
         return TensorProto.FLOAT
 
 
-def shape_proto_to_zeros(name: str, shape_proto: xla_data_pb2.ShapeProto) -> TensorProto:
+def shape_proto_to_zeros(
+    name: str, shape_proto: xla_data_pb2.ShapeProto
+) -> TensorProto:
     dims = shape_proto.dimensions
     dtype = translate_dtype(shape_proto.element_type)
     zeros = np.zeros(dims)
     return helper.make_tensor(name, data_type=dtype, dims=dims, vals=zeros)
 
 
-def shape_proto_to_value_info_proto(name: str, shape_proto: xla_data_pb2.ShapeProto) -> onnx.ValueInfoProto:
+def shape_proto_to_value_info_proto(
+    name: str, shape_proto: xla_data_pb2.ShapeProto
+) -> onnx.ValueInfoProto:
     dims = shape_proto.dimensions
     dtype = translate_dtype(shape_proto.element_type)
     return helper.make_tensor_value_info(name, dtype, dims)
@@ -429,14 +435,18 @@ def is_max_reduce_op(reduce_op: hlo_pb2.HloComputationProto) -> bool:
     )
 
 
-def get_computation(hlo_proto: hlo_pb2.HloModuleProto, computation_id: int) -> hlo_pb2.HloComputationProto:
+def get_computation(
+    hlo_proto: hlo_pb2.HloModuleProto, computation_id: int
+) -> hlo_pb2.HloComputationProto:
     for c in hlo_proto.computations:
         if c.id == computation_id:
             return c
     raise RuntimeError("Cannot find computation of " + str(computation_id))
 
 
-def get_instruction(computation: hlo_pb2.HloComputationProto, instruction_id: int) -> hlo_pb2.HloInstructionProto:
+def get_instruction(
+    computation: hlo_pb2.HloComputationProto, instruction_id: int
+) -> hlo_pb2.HloInstructionProto:
     for i in computation.instructions:
         if i.id == instruction_id:
             return i
