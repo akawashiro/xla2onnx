@@ -26,6 +26,9 @@ def gen_onnx_inputs(onnx_name: str, input_values):
             for t in v:
                 assert isinstance(t, tuple)
                 flattened.extend(list(t))
+        elif isinstance(v, tuple):
+            for t in list(v):
+                flattened.append(t)
         else:
             flattened.append(v)
     assert len(input_names) == len(flattened), (
@@ -34,6 +37,7 @@ def gen_onnx_inputs(onnx_name: str, input_values):
         + ", len(flattened) = "
         + str(len(flattened))
     )
+    print(input_values)
     for n, v in zip(input_names, flattened):
         inputs[n] = np.array(v)
     return inputs

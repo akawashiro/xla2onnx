@@ -115,6 +115,34 @@ def ResNet50(num_classes):
     )
 
 
+def test_bn():
+    test_name = "bn"
+    rng_key = random.PRNGKey(0)
+
+    batch_size = 2
+    height = 4
+    width = 4
+    channel = 2
+    input_shape = (batch_size, height, width, channel)
+
+    init_fun, predict_fun = BatchNorm()
+    _, init_params = init_fun(rng_key, input_shape)
+
+    rng = npr.RandomState(0)
+    images = rng.rand(*input_shape).astype("float32")
+
+    fn = predict_fun
+    input_values = [init_params, images]
+
+    output_values = fn(*input_values)
+    outputs = translate_and_run(fn, input_values, test_name)
+
+    print("output_values = ", output_values)
+    print("outputs = ", outputs)
+
+    check_output(output_values, outputs[0], atol=1e-6)
+
+
 def test_resnet():
     test_name = "resnet"
     rng_key = random.PRNGKey(0)
@@ -123,8 +151,8 @@ def test_resnet():
     num_classes = 1001
     # TODO: HWCN is difficult to support
     # input_shape = (224, 224, 3, batch_size)
-    input_shape = (batch_size, 224, 224, 3)
-    # input_shape = (batch_size, 6, 6, 3)
+    # input_shape = (batch_size, 224, 224, 3)
+    input_shape = (batch_size, 6, 6, 3)
 
     init_fun, predict_fun = ResNet50(num_classes)
     _, init_params = init_fun(rng_key, input_shape)
