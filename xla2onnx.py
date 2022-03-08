@@ -17,26 +17,28 @@ import hlo_pb2  # nopep8
 import xla_data_pb2  # nopep8
 
 
-def translate_dtype(element_type):
+def translate_dtype(
+    element_type: xla_data_pb2.PrimitiveType.ValueType,
+) -> Any:
     assert element_type in [xla_data_pb2.F32]
     if element_type == xla_data_pb2.F32:
         return TensorProto.FLOAT
 
 
-def shape_proto_to_zeros(name: str, shape_proto):
+def shape_proto_to_zeros(name: str, shape_proto: xla_data_pb2.ShapeProto) -> TensorProto:
     dims = shape_proto.dimensions
     dtype = translate_dtype(shape_proto.element_type)
     zeros = np.zeros(dims)
     return helper.make_tensor(name, data_type=dtype, dims=dims, vals=zeros)
 
 
-def shape_proto_to_value_info_proto(name: str, shape_proto):
+def shape_proto_to_value_info_proto(name: str, shape_proto: xla_data_pb2.ShapeProto) -> onnx.ValueInfoProto:
     dims = shape_proto.dimensions
     dtype = translate_dtype(shape_proto.element_type)
     return helper.make_tensor_value_info(name, dtype, dims)
 
 
-def translate_inputs(parameters: List[Any]) -> Tuple[List[str], List[Any]]:
+def translate_inputs(parameters: List[Any]) -> Tuple[List[str], List[onnx.TensorProto]]:
     names = []
     values = []
     for i in range(len(parameters)):
@@ -56,7 +58,7 @@ def translate_outputs(tuple_shapes: List[Any]) -> Tuple[List[str], List[Any]]:
     return (names, values)
 
 
-gensym_id = 0
+gensym_id: int = 0
 
 
 def gensym(prefix: str = "") -> str:
@@ -67,7 +69,9 @@ def gensym(prefix: str = "") -> str:
 
 # Instruction -> [(name, ValueInfo, Node)]
 def t_instruction(
-    hlo_proto, computation, instruction
+    hlo_proto: hlo_pb2.HloModuleProto,
+    computation: hlo_pb2.HloComputationProto,
+    instruction: hlo_pb2.HloInstructionProto,
 ) -> List[Tuple[str, Optional[Any], Optional[Any]]]:
     # XLA: https://www.tensorflow.org/xla/operation_semantics
     # ONNX: https://github.com/onnx/onnx/blob/main/docs/Operators.md
@@ -412,36 +416,40 @@ def t_instruction(
         raise RuntimeError(instruction.opcode + " is not supported yet!")
 
 
-def is_sum_reduce_op(reduce_op):
+def is_sum_reduce_op(reduce_op: hlo_pb2.HloComputationProto) -> bool:
     return (
         len(reduce_op.instructions) == 4 and reduce_op.instructions[3].opcode == "add"
     )
 
 
-def is_max_reduce_op(reduce_op):
+def is_max_reduce_op(reduce_op: hlo_pb2.HloComputationProto) -> bool:
     return (
         len(reduce_op.instructions) == 4
         and reduce_op.instructions[3].opcode == "maximum"
     )
 
 
-def get_computation(hlo_proto, computation_id):
+def get_computation(hlo_proto: hlo_pb2.HloModuleProto, computation_id: int) -> hlo_pb2.HloComputationProto:
     for c in hlo_proto.computations:
         if c.id == computation_id:
             return c
-    raise RuntimeError("Cannot find computation of " + computation_id)
+    raise RuntimeError("Cannot find computation of " + str(computation_id))
 
 
-def get_instruction(computation, instruction_id):
+def get_instruction(computation: hlo_pb2.HloComputationProto, instruction_id: int) -> hlo_pb2.HloInstructionProto:
     for i in computation.instructions:
         if i.id == instruction_id:
             return i
-    raise RuntimeError("Cannot find instruction of " + instruction_id)
+    raise RuntimeError("Cannot find instruction of " + str(instruction_id))
 
 
 # See https://github.com/onnx/onnx/blob/main/docs/PythonAPIOverview.md#creating-an-onnx-model-using-helper-functions
 # Pass hlo_proto also because some operators such as reduce call other sub-computation.
-def t_computation(hlo_proto, computation, onnx_filename: str):
+def t_computation(
+    hlo_proto: hlo_pb2.HloModuleProto,
+    computation: hlo_pb2.HloComputationProto,
+    onnx_filename: str,
+) -> None:
     name_value_nodes = []
     for i in computation.instructions:
         name_value_nodes.extend(t_instruction(hlo_proto, computation, i))
@@ -469,7 +477,7 @@ def t_computation(hlo_proto, computation, onnx_filename: str):
     onnx.save(model_def, onnx_filename)
 
 
-def hlo_proto_to_onnx(hlo_proto, onnx_filename: str):
+def hlo_proto_to_onnx(hlo_proto: hlo_pb2.HloModuleProto, onnx_filename: str) -> None:
     main_computation = hlo_proto.computations[-1]
     assert (
         hlo_proto.entry_computation_name == main_computation.name

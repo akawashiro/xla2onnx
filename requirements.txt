@@ -4,6 +4,7 @@ onnx
 onnxruntime
 jax[cpu]
 isort
-mypy
+mypy>=0.931 # For mypy-protobuf
 black
 autopep8
+mypy-protobuf
