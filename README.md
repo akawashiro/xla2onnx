@@ -5,10 +5,12 @@ Convert XLA to ONNX.
 - `./format.sh` to run format.
 
 TODO
-- [x] MNIST
-- [ ] Resnet(JAX)
-- [ ] MNIST(TensorFlow)
-- [ ] Resnet50(TensorFlow)
+- [x] MNIST (JAX)
+- [ ] Resnet (JAX)
+- [ ] grad(MNIST) (JAX)
+- [ ] grad(Resnet) (JAX)
+- [ ] MNIST (TensorFlow)
+- [ ] Resnet50 (TensorFlow)
 - [ ] Python package
 - [ ] [brax](https://github.com/google/brax)
 - [ ] General reduction support (not using ReduceSum/ReduceMax)
