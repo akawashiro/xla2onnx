@@ -60,6 +60,22 @@ def test_add(shape):
     check_output(output_values, outputs[0])
 
 
+@pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
+def test_divide(shape):
+    test_name = "divide"
+
+    input_values = [
+        np.random.normal(size=shape).astype(np.float32),
+        np.random.normal(size=shape).astype(np.float32),
+    ]
+    fn = jnp.divide
+    output_values = fn(*input_values)
+
+    outputs = translate_and_run(fn, input_values, test_name)
+
+    check_output(output_values, outputs[0])
+
+
 # TODO: Test axis
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
 def test_sum(shape):
@@ -183,6 +199,22 @@ def test_constant(shape):
 
 
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
+def test_rsqrt(shape):
+    test_name = "rsqrt"
+
+    input_values = [
+        np.random.normal(size=shape).astype(np.float32),
+    ]
+    fn = jax.lax.rsqrt
+    output_values = fn(*input_values)
+
+    outputs = translate_and_run(fn, input_values, test_name)
+
+    check_output(output_values, outputs[0], equal_nan=True)
+
+
+# @pytest.mark.parametrize("shape", [(4, 4), (32, 32), (32, 64)])
+@pytest.mark.parametrize("shape", [(4, 4)])
 def test_exp(shape):
     test_name = "exp"
 

@@ -107,9 +107,43 @@ def t_instruction(
         node = helper.make_node("Mul", inputs, [str(instruction.id)])
         return [(str(instruction.id), None, node)]
     elif instruction.opcode == "rsqrt":
-        # inputs = list(map(lambda x: str(x), instruction.operand_ids))
-        # node = helper.make_node("Mul", inputs, [str(instruction.id)])
-        # return [(str(instruction.id), None, node)]
+        assert len(instruction.operand_ids) == 1
+        input_id = str(instruction.operand_ids[0])
+
+        sqrt_id = gensym("rsqrt_sqrt_")
+        sqrt_node = helper.make_node(
+            "Sqrt",
+            inputs=[input_id],
+            outputs=[sqrt_id],
+        )
+
+        ones_id = gensym("rsqrt_ones_")
+        ones_node = helper.make_node(
+            "Constant",
+            inputs=[],
+            outputs=[ones_id],
+            value=helper.make_tensor(
+                gensym("rsqrt_ones_tensor_"),
+                data_type=TensorProto.FLOAT,
+                dims=list(instruction.shape.dimensions),
+                vals=np.ones(
+                    np.prod(list(instruction.shape.dimensions)), dtype=np.float32
+                ),
+            ),
+        )
+
+        div_id = str(instruction.id)
+        div_node = helper.make_node(
+            "Div",
+            inputs=[ones_id, sqrt_id],
+            outputs=[div_id],
+        )
+
+        return [
+            (sqrt_id, None, sqrt_node),
+            (ones_id, None, ones_node),
+            (div_id, None, div_node),
+        ]
     elif instruction.opcode == "divide":
         inputs = list(map(lambda x: str(x), instruction.operand_ids))
         node = helper.make_node("Div", inputs, [str(instruction.id)])

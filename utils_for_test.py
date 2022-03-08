@@ -83,7 +83,7 @@ def translate_and_run(fn, input_values, test_name):
     return outputs
 
 
-def check_output(out1, out2, rtol=1e-05, atol=1e-08):
+def check_output(out1, out2, rtol=1e-05, atol=1e-08, equal_nan=False):
     assert out1.size == out2.size
 
     # TODO: Fix these values. Maybe incorrect.
@@ -92,5 +92,5 @@ def check_output(out1, out2, rtol=1e-05, atol=1e-08):
     suggest_rtol = np.max(rd[~np.isnan(rd)])
 
     assert np.allclose(
-        out1, out2, rtol=rtol, atol=atol
+        out1, out2, rtol=rtol, atol=atol, equal_nan=equal_nan
     ), f"suggest_rtol = {suggest_rtol} suggest_atol = {suggest_atol}"

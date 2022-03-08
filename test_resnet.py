@@ -38,7 +38,7 @@ from jax.example_libraries.stax import (
     Relu,
 )
 
-from utils_for_test import translate_and_run, check_output
+from utils_for_test import check_output, translate_and_run
 
 # ResNet blocks compose other layers
 
