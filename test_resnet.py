@@ -90,8 +90,8 @@ def ResNet50(num_classes):
         # GeneralConv(("HWCN", "OIHW", "NHWC"), 64, (7, 7), (2, 2), "SAME"),
         GeneralConv(("NHWC", "OIHW", "NHWC"), 64, (7, 7), (2, 2), "SAME"),
         BatchNorm(),
-        # Relu,
-        # MaxPool((3, 3), strides=(2, 2)),
+        Relu,
+        MaxPool((3, 3), strides=(2, 2)),
         # ConvBlock(3, [64, 64, 256], strides=(1, 1)),
         # IdentityBlock(3, [64, 64]),
         # IdentityBlock(3, [64, 64]),
@@ -115,6 +115,31 @@ def ResNet50(num_classes):
     )
 
 
+def test_maxpool():
+    test_name = "maxpool"
+    rng_key = random.PRNGKey(0)
+
+    batch_size = 4
+    height = 14
+    width = 14
+    channel = 2
+    input_shape = (batch_size, height, width, channel)
+
+    init_fun, predict_fun = MaxPool((3, 3), strides=(2, 2))
+    _, init_params = init_fun(rng_key, input_shape)
+
+    rng = npr.RandomState(0)
+    images = rng.rand(*input_shape).astype("float32")
+
+    fn = predict_fun
+    input_values = [init_params, images]
+
+    output_values = fn(*input_values)
+    outputs = translate_and_run(fn, input_values, test_name)
+
+    check_output(output_values, outputs[0], atol=1e-6)
+
+
 def test_bn():
     test_name = "bn"
     rng_key = random.PRNGKey(0)
@@ -136,9 +161,6 @@ def test_bn():
 
     output_values = fn(*input_values)
     outputs = translate_and_run(fn, input_values, test_name)
-
-    # print("output_values = ", output_values)
-    # print("outputs = ", outputs)
 
     check_output(output_values, outputs[0], atol=1e-6)
 
@@ -174,7 +196,7 @@ def test_resnet():
 
     print(output_values.shape)
     # check_output(output_values[0][0], outputs[0][0][0])
-    check_output(output_values, outputs[0], atol=1e-6)
+    check_output(output_values, outputs[0], atol=1e-5, rtol=1e-3)
 
 
 # if __name__ == "__main__":
