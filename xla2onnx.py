@@ -347,17 +347,37 @@ def t_instruction(
         ), "Calling multiple computations in reduce opcode. It must be strange."
         reduce_op = get_computation(hlo_proto, instruction.called_computation_ids[0])
         if is_sum_reduce_op(reduce_op):
+            axes_id = gensym("reduce_sum_axes_")
+            axes_node = helper.make_node(
+                "Constant",
+                inputs=[],
+                outputs=[axes_id],
+                value=helper.make_tensor(
+                    gensym("reduce_sum_axes_tensor_"),
+                    data_type=TensorProto.INT64,
+                    dims=[len(instruction.dimensions)],
+                    vals=instruction.dimensions,
+                ),
+            )
+
             assert len(instruction.operand_ids) == 2
             # TODO: The second oprand of reduce_sum must be 0 as the identity of monoid. We can ignore it for now.
-            inputs = list(map(lambda x: str(x), instruction.operand_ids[:1]))
-            node = helper.make_node("ReduceSum", inputs, [str(instruction.id)])
-            return [(str(instruction.id), None, node)]
+            inputs = list(map(lambda x: str(x), instruction.operand_ids[:1])) + [
+                axes_id
+            ]
+            node = helper.make_node(
+                "ReduceSum", inputs, [str(instruction.id)], keepdims=0
+            )
+            return [(axes_id, None, axes_node), (str(instruction.id), None, node)]
         if is_max_reduce_op(reduce_op):
             assert len(instruction.operand_ids) == 2
             # TODO: The second oprand of reduce_max must be -inf as the
             # identity of monoid. We can ignore it for now.
             inputs = list(map(lambda x: str(x), instruction.operand_ids[:1]))
-            node = helper.make_node("ReduceMax", inputs, [str(instruction.id)])
+            axes = list(instruction.dimensions)
+            node = helper.make_node(
+                "ReduceMax", inputs, [str(instruction.id)], axes=axes, keepdims=0
+            )
             return [(str(instruction.id), None, node)]
         raise RuntimeError()
     elif instruction.opcode == "convolution":

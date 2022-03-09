@@ -37,7 +37,7 @@ def gen_onnx_inputs(onnx_name: str, input_values):
         + ", len(flattened) = "
         + str(len(flattened))
     )
-    print(input_values)
+    print("input_values = ", input_values)
     for n, v in zip(input_names, flattened):
         inputs[n] = np.array(v)
     return inputs
@@ -93,8 +93,9 @@ def check_output(out1, out2, rtol=1e-05, atol=1e-08, equal_nan=False):
     # TODO: Fix these values. Maybe incorrect.
     suggest_atol = np.max(np.abs(out1 - out2))
     rd = np.abs(out1 - out2) / np.abs(out2)
+    # print("rd = ", rd)
     suggest_rtol = np.max(rd[~np.isnan(rd)])
 
     assert np.allclose(
         out1, out2, rtol=rtol, atol=atol, equal_nan=equal_nan
-    ), f"suggest_rtol = {suggest_rtol} suggest_atol = {suggest_atol}"
+    ), f"out1.shape = {out1.shape} out2.shape = {out2.shape} suggest_rtol = {suggest_rtol} suggest_atol = {suggest_atol}"

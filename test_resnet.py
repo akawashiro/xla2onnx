@@ -119,7 +119,7 @@ def test_bn():
     test_name = "bn"
     rng_key = random.PRNGKey(0)
 
-    batch_size = 2
+    batch_size = 8
     height = 4
     width = 4
     channel = 2
@@ -137,8 +137,8 @@ def test_bn():
     output_values = fn(*input_values)
     outputs = translate_and_run(fn, input_values, test_name)
 
-    print("output_values = ", output_values)
-    print("outputs = ", outputs)
+    # print("output_values = ", output_values)
+    # print("outputs = ", outputs)
 
     check_output(output_values, outputs[0], atol=1e-6)
 

@@ -92,15 +92,19 @@ def test_sum(shape):
     check_output(output_values, outputs[0], rtol=1e-4)
 
 
-# TODO: Test axis
-@pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
-def test_reduce_max(shape):
+@pytest.mark.parametrize(
+    "shape,axis", [((32, 32), (1, 0)), ((32, 32), (1,)), ((32, 64), (0,))]
+)
+def test_reduce_max(shape, axis):
     test_name = "reduce_max"
 
     input_values = [
         np.random.normal(size=shape).astype(np.float32),
     ]
-    fn = jnp.max
+
+    def fn(x):
+        return jnp.max(x, axis=axis)
+
     output_values = fn(*input_values)
 
     outputs = translate_and_run(fn, input_values, test_name)
@@ -108,7 +112,9 @@ def test_reduce_max(shape):
     check_output(output_values, outputs[0])
 
 
-@pytest.mark.parametrize("shapes", [((32, 32), (32,)), ((64, 32, 32), (32,))])
+@pytest.mark.parametrize(
+    "shapes", [((128, 1), (32, 64, 128, 1)), ((32, 32), (32,)), ((64, 32, 32), (32,))]
+)
 def test_add_broadcast(shapes):
     test_name = "add_broadcast"
 
@@ -198,19 +204,42 @@ def test_constant(shape):
     check_output(output_values, outputs[0])
 
 
+@pytest.mark.parametrize("shape", [(4, 4)])
+def test_normalize(shape):
+    test_name = "normalize"
+
+    input_values = [np.random.normal(size=shape).astype(np.float32)]
+    fn = jax.nn.normalize
+    output_values = fn(*input_values)
+
+    print("jax output = ", output_values)
+
+    outputs = translate_and_run(fn, input_values, test_name)
+
+    print("onnx output = ", outputs)
+
+    check_output(output_values, outputs[0])
+
+
+# @pytest.mark.parametrize("shape", [(4, 4)])
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
 def test_rsqrt(shape):
     test_name = "rsqrt"
 
-    input_values = [
-        np.random.normal(size=shape).astype(np.float32),
-    ]
+    x = np.random.normal(size=shape).astype(np.float32)
+    input_values = [x - np.min(x) + 0.01]
+    input_values = [np.min(x) - x - 0.01]
+    print("input_values = ", input_values)
     fn = jax.lax.rsqrt
     output_values = fn(*input_values)
 
+    print("jax output = ", output_values)
+
     outputs = translate_and_run(fn, input_values, test_name)
 
-    check_output(output_values, outputs[0], equal_nan=True)
+    print("onnx output = ", outputs)
+
+    check_output(output_values, outputs[0])
 
 
 # @pytest.mark.parametrize("shape", [(4, 4), (32, 32), (32, 64)])
