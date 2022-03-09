@@ -92,7 +92,7 @@ def ResNet50(num_classes):
         BatchNorm(),
         Relu,
         MaxPool((3, 3), strides=(2, 2)),
-        # ConvBlock(3, [64, 64, 256], strides=(1, 1)),
+        ConvBlock(3, [64, 64, 256], strides=(1, 1)),
         # IdentityBlock(3, [64, 64]),
         # IdentityBlock(3, [64, 64]),
         # ConvBlock(3, [128, 128, 512]),

@@ -5,6 +5,7 @@ import jax
 import numpy as np
 import onnx
 import onnxruntime as ort
+import jax.numpy as jnp
 from jax import grad, jit, random, vmap
 
 from xla2onnx import hlo_proto_to_onnx
@@ -15,29 +16,29 @@ import hlo_pb2  # nopep8
 import xla_data_pb2  # nopep8
 
 
+def flatten_inputs(inputs):
+    if isinstance(inputs, np.ndarray):
+        return [inputs]
+    elif isinstance(inputs, jnp.ndarray):
+        return [np.array(inputs)]
+    elif isinstance(inputs, list) or isinstance(inputs, tuple):
+        return sum(map(flatten_inputs, inputs), [])
+    else:
+        raise RuntimeError("flatten_inputs: " + str(inputs))
+
+
 def gen_onnx_inputs(onnx_name: str, input_values):
     m = onnx.load(onnx_name)
     input_names = list(map(lambda x: x.name, m.graph.input))
     inputs = {}
-    flattened = []
-    for v in input_values:
-        # TODO: Dirty hack
-        if isinstance(v, list):
-            for t in v:
-                assert isinstance(t, tuple)
-                flattened.extend(list(t))
-        elif isinstance(v, tuple):
-            for t in list(v):
-                flattened.append(t)
-        else:
-            flattened.append(v)
+    flattened = flatten_inputs(input_values)
+
     assert len(input_names) == len(flattened), (
         "len(input_names) = "
         + str(len(input_names))
         + ", len(flattened) = "
         + str(len(flattened))
     )
-    print("input_values = ", input_values)
     for n, v in zip(input_names, flattened):
         inputs[n] = np.array(v)
     return inputs
