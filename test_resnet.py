@@ -36,6 +36,7 @@ from jax.example_libraries.stax import (
     LogSoftmax,
     MaxPool,
     Relu,
+    SumPool,
 )
 
 from utils_for_test import check_output, translate_and_run
@@ -108,11 +109,36 @@ def ResNet50(num_classes):
         ConvBlock(3, [512, 512, 2048]),
         IdentityBlock(3, [512, 512]),
         IdentityBlock(3, [512, 512]),
-        # AvgPool((7, 7)),
-        # Flatten,
-        # Dense(num_classes),
-        # LogSoftmax,
+        AvgPool((7, 7)),
+        Flatten,
+        Dense(num_classes),
+        LogSoftmax,
     )
+
+
+def test_sumpool():
+    test_name = "resnet_sumpool"
+    rng_key = random.PRNGKey(0)
+
+    batch_size = 4
+    height = 14
+    width = 14
+    channel = 2
+    input_shape = (batch_size, height, width, channel)
+
+    init_fun, predict_fun = SumPool((7, 7))
+    _, init_params = init_fun(rng_key, input_shape)
+
+    rng = npr.RandomState(0)
+    images = rng.rand(*input_shape).astype("float32")
+
+    fn = predict_fun
+    input_values = [init_params, images]
+
+    output_values = fn(*input_values)
+    outputs = translate_and_run(fn, input_values, test_name)
+
+    check_output(output_values, outputs[0], atol=1e-6)
 
 
 def test_avgpool():
