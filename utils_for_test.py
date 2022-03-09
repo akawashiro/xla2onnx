@@ -2,10 +2,10 @@ import subprocess
 import sys
 
 import jax
+import jax.numpy as jnp
 import numpy as np
 import onnx
 import onnxruntime as ort
-import jax.numpy as jnp
 from jax import grad, jit, random, vmap
 
 from xla2onnx import hlo_proto_to_onnx

@@ -449,6 +449,16 @@ def t_instruction(
         # TODO: We assume the first input is given in NHWC and the second input
         # is given in OIHW. So we must transpose the first one to NCHW.
         assert len(instruction.operand_ids) == 2
+        cdn = instruction.convolution_dimension_numbers
+        assert (
+            list(cdn.input_spatial_dimensions) == [1, 2]
+            and cdn.input_feature_dimension == 3
+            and list(cdn.output_spatial_dimensions) == [1, 2]
+            and cdn.output_feature_dimension == 3
+            and list(cdn.kernel_spatial_dimensions) == [2, 3]
+            and cdn.kernel_input_feature_dimension == 1
+            and cdn.kernel_output_feature_dimension == 0
+        )
         image = str(instruction.operand_ids[0])
         weight = str(instruction.operand_ids[1])
 
