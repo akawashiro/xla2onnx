@@ -380,6 +380,71 @@ def t_instruction(
             )
             return [(str(instruction.id), None, node)]
         raise RuntimeError()
+    elif instruction.opcode == "reduce-window":
+        assert (
+            len(instruction.called_computation_ids) == 1
+        ), "Calling multiple computations in reduce opcode. It must be strange."
+        reduce_op = get_computation(hlo_proto, instruction.called_computation_ids[0])
+        if is_max_reduce_op(reduce_op):
+            # TODO: The second oprand of reduce_max must be -inf as the
+            # identity of monoid. We can ignore it for now.
+            assert len(instruction.operand_ids) == 2
+            image_id = str(instruction.operand_ids[0])
+
+            # TODO: Support only classical MaxPool
+            assert len(instruction.window.dimensions) == 4
+            d0 = instruction.window.dimensions[0]
+            d1 = instruction.window.dimensions[1]
+            d2 = instruction.window.dimensions[2]
+            d3 = instruction.window.dimensions[3]
+            assert (
+                d0.size == 1
+                and d0.stride == 1
+                and d0.window_dilation == 1
+                and d0.base_dilation == 1
+            )
+            assert (
+                d3.size == 1
+                and d3.stride == 1
+                and d3.window_dilation == 1
+                and d3.base_dilation == 1
+            )
+
+            # NHWC -> NCHW
+            transpose_image_id = gensym("maxpool_transpose_image_")
+            transpose_image_node = onnx.helper.make_node(
+                "Transpose",
+                inputs=[image_id],
+                outputs=[transpose_image_id],
+                perm=np.array([0, 3, 1, 2]),
+            )
+
+            kernel_shape = [d1.size, d2.size]
+            strides = [d1.stride, d2.stride]
+            maxpool_id = gensym("maxpool_")
+            maxpool_node = onnx.helper.make_node(
+                "MaxPool",
+                inputs=[transpose_image_id],
+                outputs=[maxpool_id],
+                kernel_shape=kernel_shape,
+                strides=strides,
+            )
+
+            # NCHW -> NHWC
+            transpose_output_id = str(instruction.id)
+            transpose_output_node = onnx.helper.make_node(
+                "Transpose",
+                inputs=[maxpool_id],
+                outputs=[str(instruction.id)],
+                perm=np.array([0, 2, 3, 1]),
+            )
+
+            return [
+                (transpose_image_id, None, transpose_image_node),
+                (maxpool_id, None, maxpool_node),
+                (transpose_output_id, None, transpose_output_node),
+            ]
+        raise RuntimeError("This type of reduce-window is not supported yet")
     elif instruction.opcode == "convolution":
         # TODO: We assume the first input is given in NHWC and the second input
         # is given in OIHW. So we must transpose the first one to NCHW.

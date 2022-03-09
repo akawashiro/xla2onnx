@@ -217,7 +217,6 @@ def test_normalize(shape):
     check_output(output_values, outputs[0])
 
 
-# @pytest.mark.parametrize("shape", [(4, 4)])
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
 def test_rsqrt(shape):
     test_name = "rsqrt"

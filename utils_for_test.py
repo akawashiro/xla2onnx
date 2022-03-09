@@ -93,7 +93,6 @@ def check_output(out1, out2, rtol=1e-05, atol=1e-08, equal_nan=False):
     # TODO: Fix these values. Maybe incorrect.
     suggest_atol = np.max(np.abs(out1 - out2))
     rd = np.abs(out1 - out2) / np.abs(out2)
-    # print("rd = ", rd)
     suggest_rtol = np.max(rd[~np.isnan(rd)])
 
     assert np.allclose(
