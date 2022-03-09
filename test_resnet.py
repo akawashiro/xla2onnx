@@ -128,7 +128,9 @@ def test_conv1():
     channel = 2
     input_shape = (batch_size, height, width, channel)
 
-    init_fun, predict_fun = GeneralConv(("NHWC", "OIHW", "NHWC"), 64, (7, 7), (2, 2), "SAME")
+    init_fun, predict_fun = GeneralConv(
+        ("NHWC", "OIHW", "NHWC"), 64, (7, 7), (2, 2), "SAME"
+    )
     _, init_params = init_fun(rng_key, input_shape)
 
     rng = npr.RandomState(0)

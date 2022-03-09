@@ -446,19 +446,10 @@ def t_instruction(
             ]
         raise RuntimeError("This type of reduce-window is not supported yet")
     elif instruction.opcode == "convolution":
-        # TODO: We assume the first input is given in NHWC and the second input
-        # is given in OIHW. So we must transpose the first one to NCHW.
+        # ONNX convolution takes NHWC image and OIHW weight. So, we must
+        # transpose them.
         assert len(instruction.operand_ids) == 2
         cdn = instruction.convolution_dimension_numbers
-        assert (
-            list(cdn.input_spatial_dimensions) == [1, 2]
-            and cdn.input_feature_dimension == 3
-            and list(cdn.output_spatial_dimensions) == [1, 2]
-            and cdn.output_feature_dimension == 3
-            and list(cdn.kernel_spatial_dimensions) == [2, 3]
-            and cdn.kernel_input_feature_dimension == 1
-            and cdn.kernel_output_feature_dimension == 0
-        ), f"convolution_dimension_numbers = {str(convolution_dimension_numbers)}"
         image = str(instruction.operand_ids[0])
         weight = str(instruction.operand_ids[1])
 
@@ -467,7 +458,23 @@ def t_instruction(
             "Transpose",
             inputs=[image],
             outputs=[transpose_image_id],
-            perm=np.array([0, 3, 1, 2]),
+            perm=np.array(
+                [0, cdn.input_feature_dimension] + list(cdn.input_spatial_dimensions)
+            ),
+        )
+
+        transpose_weight_id = gensym("convolution_transpose_weight_")
+        transpose_weight_node = onnx.helper.make_node(
+            "Transpose",
+            inputs=[weight],
+            outputs=[transpose_weight_id],
+            perm=np.array(
+                [
+                    cdn.kernel_output_feature_dimension,
+                    cdn.kernel_input_feature_dimension,
+                ]
+                + list(cdn.kernel_spatial_dimensions)
+            ),
         )
 
         assert len(instruction.window.dimensions) == 2
@@ -491,7 +498,7 @@ def t_instruction(
         convolution_output_id = gensym("convolution_output_")
         convolution_node = onnx.helper.make_node(
             "Conv",
-            inputs=[transpose_image_id, weight],
+            inputs=[transpose_image_id, transpose_weight_id],
             outputs=[convolution_output_id],
             kernel_shape=kernel_shape,
             strides=strides,
@@ -499,17 +506,23 @@ def t_instruction(
         )
 
         # The output is NCHW. So we must transpose it again.
-        # NCHW -> NHWC
+        out_perm = [0, cdn.input_feature_dimension] + list(cdn.input_spatial_dimensions)
+        assert sorted(out_perm) == list(range(len(out_perm)))
+        out_perm_inv = list(range(len(out_perm)))
+        for i in range(len(out_perm)):
+            out_perm_inv[out_perm[i]] = i
+
         transpose_output_id = gensym("convolution_transpose_output_")
         transpose_output_node = onnx.helper.make_node(
             "Transpose",
             inputs=[convolution_output_id],
             outputs=[str(instruction.id)],
-            perm=np.array([0, 2, 3, 1]),
+            perm=np.array(out_perm_inv),
         )
 
         return [
             (transpose_image_id, None, transpose_image_node),
+            (transpose_weight_id, None, transpose_weight_node),
             (convolution_output_id, None, convolution_node),
             (transpose_output_id, None, transpose_output_node),
         ]
