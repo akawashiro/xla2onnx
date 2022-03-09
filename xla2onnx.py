@@ -385,6 +385,64 @@ def t_instruction(
             len(instruction.called_computation_ids) == 1
         ), "Calling multiple computations in reduce opcode. It must be strange."
         reduce_op = get_computation(hlo_proto, instruction.called_computation_ids[0])
+        if is_sum_reduce_op(reduce_op):
+            assert False, "TODO: Continue from here"
+            assert len(instruction.operand_ids) == 2
+            image_id = str(instruction.operand_ids[0])
+
+            # TODO: Support only classical MaxPool
+            assert len(instruction.window.dimensions) == 4
+            d0 = instruction.window.dimensions[0]
+            d1 = instruction.window.dimensions[1]
+            d2 = instruction.window.dimensions[2]
+            d3 = instruction.window.dimensions[3]
+            assert (
+                d0.size == 1
+                and d0.stride == 1
+                and d0.window_dilation == 1
+                and d0.base_dilation == 1
+            )
+            assert (
+                d3.size == 1
+                and d3.stride == 1
+                and d3.window_dilation == 1
+                and d3.base_dilation == 1
+            )
+
+            # NHWC -> NCHW
+            transpose_image_id = gensym("avgpool_transpose_image_")
+            transpose_image_node = onnx.helper.make_node(
+                "Transpose",
+                inputs=[image_id],
+                outputs=[transpose_image_id],
+                perm=np.array([0, 3, 1, 2]),
+            )
+
+            kernel_shape = [d1.size, d2.size]
+            strides = [d1.stride, d2.stride]
+            avgpool_id = gensym("avgpool_")
+            avgpool_node = onnx.helper.make_node(
+                "AveragePool",
+                inputs=[transpose_image_id],
+                outputs=[avgpool_id],
+                kernel_shape=kernel_shape,
+                strides=strides,
+            )
+
+            # NCHW -> NHWC
+            transpose_output_id = str(instruction.id)
+            transpose_output_node = onnx.helper.make_node(
+                "Transpose",
+                inputs=[avgpool_id],
+                outputs=[str(instruction.id)],
+                perm=np.array([0, 2, 3, 1]),
+            )
+
+            return [
+                (transpose_image_id, None, transpose_image_node),
+                (avgpool_id, None, avgpool_node),
+                (transpose_output_id, None, transpose_output_node),
+            ]
         if is_max_reduce_op(reduce_op):
             # TODO: The second oprand of reduce_max must be -inf as the
             # identity of monoid. We can ignore it for now.

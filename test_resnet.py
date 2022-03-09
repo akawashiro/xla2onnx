@@ -48,19 +48,16 @@ def ConvBlock(kernel_size, filters, strides=(2, 2)):
     filters1, filters2, filters3 = filters
     Main = stax.serial(
         Conv(filters1, (1, 1), strides),
-        # BatchNorm(),
-        # Relu,
-        # Conv(filters2, (ks, ks), padding="SAME"),
-        # BatchNorm(),
-        # Relu,
+        BatchNorm(),
+        Relu,
+        Conv(filters2, (ks, ks), padding="SAME"),
+        BatchNorm(),
+        Relu,
         Conv(filters3, (1, 1)),
-        # BatchNorm(),
+        BatchNorm(),
     )
     Shortcut = stax.serial(Conv(filters3, (1, 1), strides), BatchNorm())
-    Shortcut1 = stax.serial(Conv(filters3, (1, 1), strides))
-    Shortcut2 = stax.serial(Conv(filters3, (1, 1), strides))
-    # return stax.serial(FanOut(2), stax.parallel(Main, Shortcut), FanInSum, Relu)
-    return stax.serial(FanOut(2), stax.parallel(Shortcut1, Shortcut2), FanInSum)
+    return stax.serial(FanOut(2), stax.parallel(Main, Shortcut), FanInSum, Relu)
 
 
 def IdentityBlock(kernel_size, filters):
@@ -96,26 +93,51 @@ def ResNet50(num_classes):
         Relu,
         MaxPool((3, 3), strides=(2, 2)),
         ConvBlock(3, [64, 64, 256], strides=(1, 1)),
-        # IdentityBlock(3, [64, 64]),
-        # IdentityBlock(3, [64, 64]),
-        # ConvBlock(3, [128, 128, 512]),
-        # IdentityBlock(3, [128, 128]),
-        # IdentityBlock(3, [128, 128]),
-        # IdentityBlock(3, [128, 128]),
-        # ConvBlock(3, [256, 256, 1024]),
-        # IdentityBlock(3, [256, 256]),
-        # IdentityBlock(3, [256, 256]),
-        # IdentityBlock(3, [256, 256]),
-        # IdentityBlock(3, [256, 256]),
-        # IdentityBlock(3, [256, 256]),
-        # ConvBlock(3, [512, 512, 2048]),
-        # IdentityBlock(3, [512, 512]),
-        # IdentityBlock(3, [512, 512]),
+        IdentityBlock(3, [64, 64]),
+        IdentityBlock(3, [64, 64]),
+        ConvBlock(3, [128, 128, 512]),
+        IdentityBlock(3, [128, 128]),
+        IdentityBlock(3, [128, 128]),
+        IdentityBlock(3, [128, 128]),
+        ConvBlock(3, [256, 256, 1024]),
+        IdentityBlock(3, [256, 256]),
+        IdentityBlock(3, [256, 256]),
+        IdentityBlock(3, [256, 256]),
+        IdentityBlock(3, [256, 256]),
+        IdentityBlock(3, [256, 256]),
+        ConvBlock(3, [512, 512, 2048]),
+        IdentityBlock(3, [512, 512]),
+        IdentityBlock(3, [512, 512]),
         # AvgPool((7, 7)),
         # Flatten,
         # Dense(num_classes),
         # LogSoftmax,
     )
+
+
+def test_avgpool():
+    test_name = "resnet_avgpool"
+    rng_key = random.PRNGKey(0)
+
+    batch_size = 4
+    height = 14
+    width = 14
+    channel = 2
+    input_shape = (batch_size, height, width, channel)
+
+    init_fun, predict_fun = AvgPool((7, 7))
+    _, init_params = init_fun(rng_key, input_shape)
+
+    rng = npr.RandomState(0)
+    images = rng.rand(*input_shape).astype("float32")
+
+    fn = predict_fun
+    input_values = [init_params, images]
+
+    output_values = fn(*input_values)
+    outputs = translate_and_run(fn, input_values, test_name)
+
+    check_output(output_values, outputs[0], atol=1e-6)
 
 
 def test_conv1():
@@ -167,7 +189,7 @@ def test_convblock():
     output_values = fn(*input_values)
     outputs = translate_and_run(fn, input_values, test_name)
 
-    check_output(output_values, outputs[0], atol=1e-6)
+    check_output(output_values, outputs[0], atol=1e-5)
 
 
 def test_maxpool():
@@ -251,7 +273,7 @@ def test_resnet():
 
     print(output_values.shape)
     # check_output(output_values[0][0], outputs[0][0][0])
-    check_output(output_values, outputs[0], atol=1e-5, rtol=1e-3)
+    check_output(output_values, outputs[0], atol=1e-3, rtol=1e-3)
 
 
 # if __name__ == "__main__":
