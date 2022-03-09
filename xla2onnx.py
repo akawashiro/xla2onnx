@@ -458,7 +458,7 @@ def t_instruction(
             and list(cdn.kernel_spatial_dimensions) == [2, 3]
             and cdn.kernel_input_feature_dimension == 1
             and cdn.kernel_output_feature_dimension == 0
-        )
+        ), f"convolution_dimension_numbers = {str(convolution_dimension_numbers)}"
         image = str(instruction.operand_ids[0])
         weight = str(instruction.operand_ids[1])
 
