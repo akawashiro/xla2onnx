@@ -21,6 +21,7 @@ optimization library.
 import jax.numpy as jnp
 import numpy as np
 import numpy.random as npr
+import pytest
 from jax import grad, jit, random
 from jax.example_libraries import optimizers, stax
 from jax.example_libraries.stax import (
@@ -116,15 +117,12 @@ def ResNet50(num_classes):
     )
 
 
-def test_sumpool():
-    test_name = "resnet_sumpool"
+@pytest.mark.parametrize("N,H,W,C", [(2, 4, 4, 2), (8, 56, 56, 64)])
+def test_sumpool_NHWC(N, H, W, C):
+    test_name = "resnet_sumpool_NHWC"
     rng_key = random.PRNGKey(0)
 
-    batch_size = 2
-    height = 4
-    width = 4
-    channel = 2
-    input_shape = (batch_size, height, width, channel)
+    input_shape = (N, H, W, C)
 
     init_fun, predict_fun = SumPool((2, 2))
     _, init_params = init_fun(rng_key, input_shape)
