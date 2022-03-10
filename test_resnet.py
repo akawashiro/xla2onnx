@@ -120,13 +120,13 @@ def test_sumpool():
     test_name = "resnet_sumpool"
     rng_key = random.PRNGKey(0)
 
-    batch_size = 4
-    height = 14
-    width = 14
+    batch_size = 2
+    height = 4
+    width = 4
     channel = 2
     input_shape = (batch_size, height, width, channel)
 
-    init_fun, predict_fun = SumPool((7, 7))
+    init_fun, predict_fun = SumPool((2, 2))
     _, init_params = init_fun(rng_key, input_shape)
 
     rng = npr.RandomState(0)

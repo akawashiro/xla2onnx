@@ -5,6 +5,7 @@ from typing import Any, List, Optional, Tuple, Union
 import jax
 import jax.numpy as jnp
 import numpy as np
+import numpy.typing as npt
 import onnx
 import onnxruntime as ort
 import pytest
@@ -34,6 +35,12 @@ def shape_proto_to_zeros(
     dtype = translate_dtype(shape_proto.element_type)
     zeros = np.zeros(dims)
     return helper.make_tensor(name, data_type=dtype, dims=dims, vals=zeros)
+
+
+def constant_tensor(name: str, constant: npt.NDArray[np.float32]) -> TensorProto:
+    return helper.make_tensor(
+        name, data_type=TensorProto.FLOAT, dims=constant.shape, vals=constant
+    )
 
 
 def shape_proto_to_value_info_proto(
@@ -386,11 +393,10 @@ def t_instruction(
         ), "Calling multiple computations in reduce opcode. It must be strange."
         reduce_op = get_computation(hlo_proto, instruction.called_computation_ids[0])
         if is_sum_reduce_op(reduce_op):
-            assert False, "TODO: Continue from here"
             assert len(instruction.operand_ids) == 2
             image_id = str(instruction.operand_ids[0])
 
-            # TODO: Support only classical MaxPool
+            # TODO: Support only classical SumPool
             assert len(instruction.window.dimensions) == 4
             d0 = instruction.window.dimensions[0]
             d1 = instruction.window.dimensions[1]
@@ -410,7 +416,7 @@ def t_instruction(
             )
 
             # NHWC -> NCHW
-            transpose_image_id = gensym("avgpool_transpose_image_")
+            transpose_image_id = gensym("sumpool_transpose_image_")
             transpose_image_node = onnx.helper.make_node(
                 "Transpose",
                 inputs=[image_id],
@@ -420,7 +426,7 @@ def t_instruction(
 
             kernel_shape = [d1.size, d2.size]
             strides = [d1.stride, d2.stride]
-            avgpool_id = gensym("avgpool_")
+            avgpool_id = gensym("sumpool_avgpool_")
             avgpool_node = onnx.helper.make_node(
                 "AveragePool",
                 inputs=[transpose_image_id],
@@ -430,18 +436,38 @@ def t_instruction(
             )
 
             # NCHW -> NHWC
-            transpose_output_id = str(instruction.id)
+            transpose_output_id = gensym("sumpool_avgpool_output_")
             transpose_output_node = onnx.helper.make_node(
                 "Transpose",
                 inputs=[avgpool_id],
-                outputs=[str(instruction.id)],
+                outputs=[transpose_output_id],
                 perm=np.array([0, 2, 3, 1]),
+            )
+
+            avgpool_mul_constant_id = gensym("sumpool_mul_constant_")
+            avgpool_mul_constant_node = helper.make_node(
+                "Constant",
+                inputs=[],
+                outputs=[avgpool_mul_constant_id],
+                value=constant_tensor(
+                    gensym("sumpool_mul_constant_value_"),
+                    np.array([d1.size * d2.size], dtype=np.float32),
+                ),
+            )
+
+            avgpool_mul_id = str(instruction.id)
+            avgpool_mul_node = helper.make_node(
+                "Mul",
+                inputs=[transpose_output_id, avgpool_mul_constant_id],
+                outputs=[avgpool_mul_id],
             )
 
             return [
                 (transpose_image_id, None, transpose_image_node),
                 (avgpool_id, None, avgpool_node),
                 (transpose_output_id, None, transpose_output_node),
+                (avgpool_mul_constant_id, None, avgpool_mul_constant_node),
+                (avgpool_mul_id, None, avgpool_mul_node),
             ]
         if is_max_reduce_op(reduce_op):
             # TODO: The second oprand of reduce_max must be -inf as the

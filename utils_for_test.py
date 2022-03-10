@@ -96,6 +96,8 @@ def check_output(out1, out2, rtol=1e-05, atol=1e-08, equal_nan=False):
     rd = np.abs(out1 - out2) / np.abs(out2)
     suggest_rtol = np.max(rd[~np.isnan(rd)])
 
-    assert np.allclose(
-        out1, out2, rtol=rtol, atol=atol, equal_nan=equal_nan
-    ), f"out1.shape = {out1.shape} out2.shape = {out2.shape} suggest_rtol = {suggest_rtol} suggest_atol = {suggest_atol}"
+    error_msg = f"out1.shape = {out1.shape} out2.shape = {out2.shape} suggest_rtol = {suggest_rtol} suggest_atol = {suggest_atol}"
+    if out1.size < 64:
+        error_msg += f" out1 = {str(out1)} out2 = {str(out2)}"
+
+    assert np.allclose(out1, out2, rtol=rtol, atol=atol, equal_nan=equal_nan), error_msg
