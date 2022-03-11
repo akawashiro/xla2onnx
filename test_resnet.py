@@ -110,10 +110,10 @@ def ResNet50(num_classes):
         ConvBlock(3, [512, 512, 2048]),
         IdentityBlock(3, [512, 512]),
         IdentityBlock(3, [512, 512]),
-        AvgPool((7, 7)),
-        Flatten,
-        Dense(num_classes),
-        LogSoftmax,
+        # AvgPool((7, 7)),
+        # Flatten,
+        # Dense(num_classes),
+        # LogSoftmax,
     )
 
 
