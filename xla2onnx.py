@@ -1,3 +1,4 @@
+import copy
 import subprocess
 import sys
 from typing import Any, List, Optional, Tuple, Union
@@ -535,7 +536,7 @@ def t_instruction(
         input_id = str(instruction.operand_ids[0])
         dest_shape = instruction.shape
 
-        reshape_dims = dest_shape.dimensions
+        reshape_dims = copy.deepcopy(dest_shape.dimensions)
         for i in range(len(reshape_dims)):
             if i not in list(instruction.dimensions):
                 reshape_dims[i] = 1
@@ -572,6 +573,14 @@ def t_instruction(
             value=shape_proto_to_zeros(
                 gensym("broadcast_shape_proto_to_zeros_"), instruction.shape
             ),
+        )
+        print(
+            "instruction.id = "
+            + str(instruction.id)
+            + " zeros_id = "
+            + zeros_id
+            + " instruction.shape = "
+            + str(instruction.shape)
         )
         ret.append((zeros_id, None, zeros_node))
 
