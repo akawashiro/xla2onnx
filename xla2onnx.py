@@ -80,44 +80,115 @@ def gensym(prefix: str = "") -> str:
     return prefix + "gensym_" + str(gensym_id)
 
 
+def is_sum_reduce_op(reduce_op: hlo_pb2.HloComputationProto) -> bool:
+    return (
+        len(reduce_op.instructions) == 4 and reduce_op.instructions[3].opcode == "add"
+    )
+
+
+def is_max_reduce_op(reduce_op: hlo_pb2.HloComputationProto) -> bool:
+    return (
+        len(reduce_op.instructions) == 4
+        and reduce_op.instructions[3].opcode == "maximum"
+    )
+
+
+def get_computation(
+    hlo_proto: hlo_pb2.HloModuleProto, computation_id: int
+) -> hlo_pb2.HloComputationProto:
+    for c in hlo_proto.computations:
+        if c.id == computation_id:
+            return c
+    raise RuntimeError("Cannot find computation of " + str(computation_id))
+
+
+def get_instruction(
+    computation: hlo_pb2.HloComputationProto, instruction_id: int
+) -> hlo_pb2.HloInstructionProto:
+    for i in computation.instructions:
+        if i.id == instruction_id:
+            return i
+    raise RuntimeError("Cannot find instruction of " + str(instruction_id))
+
+
 def sumpool_HW(
+    computation: hlo_pb2.HloComputationProto,
     instruction: hlo_pb2.HloInstructionProto,
 ) -> List[Tuple[str, Optional[Any], Optional[Any]]]:
     assert len(instruction.operand_ids) == 2
     image_id = str(instruction.operand_ids[0])
+    image_shape = get_instruction(computation, instruction.operand_ids[0]).shape
 
     assert len(instruction.window.dimensions) == 2
+    assert len(instruction.shape.dimensions) == 2
     d0 = instruction.window.dimensions[0]
     d1 = instruction.window.dimensions[1]
 
-    # NHWC -> NCHW
-    transpose_image_id = gensym("sumpool_transpose_image_")
-    transpose_image_node = onnx.helper.make_node(
-        "Transpose",
-        inputs=[image_id],
-        outputs=[transpose_image_id],
-        perm=np.array([0, 3, 1, 2]),
-    )
+    ret = []
 
-    kernel_shape = [d1.size, d2.size]
-    strides = [d1.stride, d2.stride]
+    reshape_to_NCHW_shape_id = gensym("reshape_to_NCHW_shape_")
+    reshape_to_NCHW_shape_node = helper.make_node(
+        "Constant",
+        inputs=[],
+        outputs=[reshape_to_NCHW_shape_id],
+        value=helper.make_tensor(
+            gensym("reshape_to_NCHW_shape_tensor_"),
+            data_type=TensorProto.INT64,
+            dims=[4],
+            # TODO: Maybe incorrect
+            vals=[
+                1,
+                1,
+                image_shape.dimensions[0],
+                image_shape.dimensions[1],
+            ],
+        ),
+    )
+    ret.append((reshape_to_NCHW_shape_id, None, reshape_to_NCHW_shape_node))
+
+    # HW -> NCHW
+    reshape_to_NCHW_id = gensym("reshape_to_NCHW_")
+    reshape_to_NCHW_node = onnx.helper.make_node(
+        "Reshape",
+        inputs=[image_id, reshape_to_NCHW_shape_id],
+        outputs=[reshape_to_NCHW_id],
+    )
+    ret.append((reshape_to_NCHW_id, None, reshape_to_NCHW_node))
+
+    kernel_shape = [d0.size, d1.size]
+    strides = [d0.stride, d1.stride]
     avgpool_id = gensym("sumpool_avgpool_")
     avgpool_node = onnx.helper.make_node(
         "AveragePool",
-        inputs=[transpose_image_id],
+        inputs=[reshape_to_NCHW_id],
         outputs=[avgpool_id],
         kernel_shape=kernel_shape,
         strides=strides,
     )
+    ret.append((avgpool_id, None, avgpool_node))
 
-    # NCHW -> NHWC
-    transpose_output_id = gensym("sumpool_avgpool_output_")
-    transpose_output_node = onnx.helper.make_node(
-        "Transpose",
-        inputs=[avgpool_id],
-        outputs=[transpose_output_id],
-        perm=np.array([0, 2, 3, 1]),
+    reshape_to_HW_shape_id = gensym("reshape_to_HW_shape_")
+    reshape_to_HW_shape_node = helper.make_node(
+        "Constant",
+        inputs=[],
+        outputs=[reshape_to_HW_shape_id],
+        value=helper.make_tensor(
+            gensym("reshape_to_HW_shape_tensor_"),
+            data_type=TensorProto.INT64,
+            dims=[2],
+            # TODO: Maybe incorrect
+            vals=[instruction.shape.dimensions[0], instruction.shape.dimensions[0]],
+        ),
     )
+    ret.append((reshape_to_HW_shape_id, None, reshape_to_HW_shape_node))
+
+    reshape_to_HW_id = gensym("reshape_to_HW_")
+    reshape_to_HW_node = onnx.helper.make_node(
+        "Reshape",
+        inputs=[avgpool_id, reshape_to_HW_shape_id],
+        outputs=[reshape_to_HW_id],
+    )
+    ret.append((reshape_to_HW_id, None, reshape_to_HW_node))
 
     avgpool_mul_constant_id = gensym("sumpool_mul_constant_")
     avgpool_mul_constant_node = helper.make_node(
@@ -126,24 +197,20 @@ def sumpool_HW(
         outputs=[avgpool_mul_constant_id],
         value=constant_tensor(
             gensym("sumpool_mul_constant_value_"),
-            np.array([d1.size * d2.size], dtype=np.float32),
+            np.array([d0.size * d1.size], dtype=np.float32),
         ),
     )
+    ret.append((avgpool_mul_constant_id, None, avgpool_mul_constant_node))
 
     avgpool_mul_id = str(instruction.id)
     avgpool_mul_node = helper.make_node(
         "Mul",
-        inputs=[transpose_output_id, avgpool_mul_constant_id],
+        inputs=[reshape_to_HW_id, avgpool_mul_constant_id],
         outputs=[avgpool_mul_id],
     )
+    ret.append((avgpool_mul_id, None, avgpool_mul_node))
 
-    return [
-        (transpose_image_id, None, transpose_image_node),
-        (avgpool_id, None, avgpool_node),
-        (transpose_output_id, None, transpose_output_node),
-        (avgpool_mul_constant_id, None, avgpool_mul_constant_node),
-        (avgpool_mul_id, None, avgpool_mul_node),
-    ]
+    return ret
 
 
 def sumpool_NHWC(
@@ -464,21 +531,56 @@ def t_instruction(
         node = helper.make_node("Identity", inputs, [str(instruction.id)])
         return [(str(instruction.id), None, node)]
     elif instruction.opcode == "broadcast":
-        # TODO: Adding dummy broadcasted value is wasteful clearly. I hope
-        # post-process remove this dummy value with constant propagation.
-        zero_id = gensym("broadcast_zero_")
-        dummy_zeros = helper.make_node(
+        assert len(instruction.operand_ids) == 1
+        input_id = str(instruction.operand_ids[0])
+        dest_shape = instruction.shape
+
+        reshape_dims = dest_shape.dimensions
+        for i in range(len(reshape_dims)):
+            if i not in list(instruction.dimensions):
+                reshape_dims[i] = 1
+
+        ret = []
+
+        shape_id = gensym("broadcast_reshape_shape_")
+        shape_node = helper.make_node(
             "Constant",
             inputs=[],
-            outputs=[zero_id],
+            outputs=[shape_id],
+            value=helper.make_tensor(
+                gensym("broadcast_reshape_tensor_"),
+                data_type=TensorProto.INT64,
+                dims=[len(dest_shape.dimensions)],
+                vals=reshape_dims,
+            ),
+        )
+        ret.append((shape_id, None, shape_node))
+
+        reshape_id = gensym("broadcast_reshape_")
+        reshape_node = helper.make_node(
+            "Reshape", inputs=[input_id, shape_id], outputs=[reshape_id]
+        )
+        ret.append((reshape_id, None, reshape_node))
+
+        # TODO: Adding dummy broadcasted value is wasteful clearly. I hope
+        # post-process remove this dummy value with constant propagation.
+        zeros_id = gensym("broadcast_zero_")
+        zeros_node = helper.make_node(
+            "Constant",
+            inputs=[],
+            outputs=[zeros_id],
             value=shape_proto_to_zeros(
                 gensym("broadcast_shape_proto_to_zeros_"), instruction.shape
             ),
         )
-        inputs = list(map(lambda x: str(x), instruction.operand_ids)) + [zero_id]
-        node = helper.make_node("Add", inputs, [str(instruction.id)])
-        # Note: Nodes must be topologically sorted
-        return [(zero_id, None, dummy_zeros), (str(instruction.id), None, node)]
+        ret.append((zeros_id, None, zeros_node))
+
+        add_id = str(instruction.id)
+        add_node = helper.make_node(
+            "Add", [reshape_id, zeros_id], [str(instruction.id)]
+        )
+        ret.append((add_id, None, add_node))
+        return ret
     elif instruction.opcode == "reshape":
         shape_id = gensym("reshape_shape_")
         shape_node = helper.make_node(
@@ -543,7 +645,7 @@ def t_instruction(
             if len(instruction.window.dimensions) == 4:
                 return sumpool_NHWC(instruction)
             elif len(instruction.window.dimensions) == 2:
-                return sumpool_HW(instruction)
+                return sumpool_HW(computation, instruction)
             else:
                 raise RuntimeError("Not supported reduce window")
         if is_max_reduce_op(reduce_op):
@@ -691,37 +793,6 @@ def t_instruction(
         raise RuntimeError(instruction.opcode + " is not supported yet!")
 
 
-def is_sum_reduce_op(reduce_op: hlo_pb2.HloComputationProto) -> bool:
-    return (
-        len(reduce_op.instructions) == 4 and reduce_op.instructions[3].opcode == "add"
-    )
-
-
-def is_max_reduce_op(reduce_op: hlo_pb2.HloComputationProto) -> bool:
-    return (
-        len(reduce_op.instructions) == 4
-        and reduce_op.instructions[3].opcode == "maximum"
-    )
-
-
-def get_computation(
-    hlo_proto: hlo_pb2.HloModuleProto, computation_id: int
-) -> hlo_pb2.HloComputationProto:
-    for c in hlo_proto.computations:
-        if c.id == computation_id:
-            return c
-    raise RuntimeError("Cannot find computation of " + str(computation_id))
-
-
-def get_instruction(
-    computation: hlo_pb2.HloComputationProto, instruction_id: int
-) -> hlo_pb2.HloInstructionProto:
-    for i in computation.instructions:
-        if i.id == instruction_id:
-            return i
-    raise RuntimeError("Cannot find instruction of " + str(instruction_id))
-
-
 # See https://github.com/onnx/onnx/blob/main/docs/PythonAPIOverview.md#creating-an-onnx-model-using-helper-functions
 # Pass hlo_proto also because some operators such as reduce call other sub-computation.
 def t_computation(
@@ -753,7 +824,10 @@ def t_computation(
         graph_def, producer_name="onnx-example", opset_imports=[op]
     )
     onnx.checker.check_model(model_def)
-    onnx.save(model_def, onnx_filename)
+    inferred_model = onnx.shape_inference.infer_shapes(model_def)
+    # print(inferred_model)
+    # onnx.save(model_def, onnx_filename)
+    onnx.save(inferred_model, onnx_filename)
 
 
 def hlo_proto_to_onnx(hlo_proto: hlo_pb2.HloModuleProto, onnx_filename: str) -> None:
