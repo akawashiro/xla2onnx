@@ -25,6 +25,22 @@ import xla_data_pb2  # nopep8
 from utils_for_test import check_output, translate_and_run
 
 
+@pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
+def test_vmap(shape):
+    test_name = "vmap"
+
+    input_values = [
+        np.random.normal(size=shape).astype(np.float32),
+        np.random.normal(size=shape).astype(np.float32),
+    ]
+    fn = vmap(jnp.add)
+    output_values = fn(*input_values)
+
+    outputs = translate_and_run(fn, input_values, test_name)
+
+    check_output(output_values, outputs[0])
+
+
 def test_mnist():
     test_name = "mnist"
     init_random_params, predict = stax.serial(
