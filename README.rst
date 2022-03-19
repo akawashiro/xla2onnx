@@ -15,6 +15,6 @@ TODO
 - [ ] grad(Resnet) (JAX)
 - [ ] MNIST (TensorFlow)
 - [ ] Resnet50 (TensorFlow)
-- [ ] [brax](https://github.com/google/brax)
+- [ ] `brax <https://github.com/google/brax>`_
 - [ ] General reduction support (not using ReduceSum/ReduceMax)
 - [ ] license
