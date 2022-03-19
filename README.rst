@@ -8,6 +8,7 @@ Convert XLA to ONNX.
 - Run tests: `pytest`
 
 TODO
+----
 - [x] MNIST (JAX)
 - [ ] Resnet (JAX)
 - [ ] grad(MNIST) (JAX)
