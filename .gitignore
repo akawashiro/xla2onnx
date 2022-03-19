@@ -7,3 +7,6 @@ hlo_proto
 *.onnx
 __pycache__
 myenv
+xla2onnx.egg-info
+.mypy_cache
+.pytest_cache
