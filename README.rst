@@ -17,4 +17,3 @@ TODO
 - [ ] Resnet50 (TensorFlow)
 - [ ] `brax <https://github.com/google/brax>`_
 - [ ] General reduction support (not using ReduceSum/ReduceMax)
-- [ ] license
