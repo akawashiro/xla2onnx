@@ -1,17 +1,20 @@
-# xla2onnx
+xla2onnx
+========
 Convert XLA to ONNX.
 
-- `./run.sh` to run all test.
-- `./format.sh` to run format.
+- Install: `pip3 install -e .`
+- Format: `./format.sh`
+- Lint: `./lint.sh`
+- Run tests: `pytest`
 
 TODO
+----
 - [x] MNIST (JAX)
 - [ ] Resnet (JAX)
 - [ ] grad(MNIST) (JAX)
 - [ ] grad(Resnet) (JAX)
 - [ ] MNIST (TensorFlow)
 - [ ] Resnet50 (TensorFlow)
-- [ ] Python package
-- [ ] [brax](https://github.com/google/brax)
+- [ ] `brax <https://github.com/google/brax>`_
 - [ ] General reduction support (not using ReduceSum/ReduceMax)
 - [ ] license

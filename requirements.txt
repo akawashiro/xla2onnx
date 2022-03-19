@@ -8,3 +8,4 @@ mypy>=0.931 # For mypy-protobuf
 black
 autopep8
 mypy-protobuf
+nptyping

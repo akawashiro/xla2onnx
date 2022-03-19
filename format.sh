@@ -1,15 +1,8 @@
 #! /bin/bash -eux
 
-python3 -m venv myenv 
-source myenv/bin/activate
-pip3 install -r requirements.txt
+cd $(git rev-parse --show-toplevel)
 
-for s in xla2onnx.py test_xla2onnx.py test_resnet.py utils_for_test.py; do
-    if [ ${s} == "xla2onnx.py" ]; then
-        MYPYPATH=hlo_proto mypy ${s} --ignore-missing-imports --strict
-    else
-        MYPYPATH=hlo_proto mypy ${s} --ignore-missing-imports
-    fi
+for s in xla2onnx/xla2onnx.py xla2onnx/utils_for_test.py tests/test_resnet.py tests/test_xla2onnx.py; do
     isort ${s}
     autopep8 ${s} --in-place
     black ${s}

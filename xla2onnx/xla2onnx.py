@@ -13,10 +13,8 @@ import pytest
 from jax import grad, jit, vmap
 from onnx import AttributeProto, GraphProto, TensorProto, TypeProto, helper
 
-sys.path.append("hlo_proto")  # nopep8
-
-import hlo_pb2  # nopep8
-import xla_data_pb2  # nopep8
+from . import hlo_pb2  # nopep8
+from . import xla_data_pb2  # nopep8
 
 
 # TODO: Remove workaround of type annotation

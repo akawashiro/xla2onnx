@@ -2,6 +2,7 @@ import subprocess
 import sys
 from typing import Any, List, Optional, Tuple, Union
 
+import datasets
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -14,15 +15,9 @@ from jax.example_libraries import stax
 from jax.example_libraries.stax import Dense, LogSoftmax, Relu
 from onnx import AttributeProto, GraphProto, TypeProto, helper
 
-import datasets
-from xla2onnx import hlo_proto_to_onnx
+from xla2onnx import check_output, hlo_proto_to_onnx, translate_and_run
 
-sys.path.append("hlo_proto")  # nopep8
-
-import hlo_pb2  # nopep8
-import xla_data_pb2  # nopep8
-
-from utils_for_test import check_output, translate_and_run
+# from utils_for_test import check_output, translate_and_run
 
 
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])

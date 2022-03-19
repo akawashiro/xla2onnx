@@ -40,7 +40,7 @@ from jax.example_libraries.stax import (
     SumPool,
 )
 
-from utils_for_test import check_output, translate_and_run
+from xla2onnx import check_output, translate_and_run
 
 # ResNet blocks compose other layers
 

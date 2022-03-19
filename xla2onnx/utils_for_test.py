@@ -1,3 +1,5 @@
+# TODO(akawashiro): I want to put this file in tests directory
+
 import subprocess
 import sys
 
@@ -12,8 +14,8 @@ from xla2onnx import hlo_proto_to_onnx
 
 sys.path.append("hlo_proto")  # nopep8
 
-import hlo_pb2  # nopep8
-import xla_data_pb2  # nopep8
+from . import hlo_pb2  # nopep8
+from . import xla_data_pb2  # nopep8
 
 
 def flatten_inputs(inputs):
