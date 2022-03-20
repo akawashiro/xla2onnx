@@ -24,7 +24,7 @@ import numpy.typing as npt
 import onnx
 import onnxruntime as ort
 import pytest
-from jax import grad, jit, vmap
+from jax import grad, jit
 from onnx import AttributeProto, GraphProto, TensorProto, TypeProto, helper
 
 from . import hlo_pb2  # nopep8

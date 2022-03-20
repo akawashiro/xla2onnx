@@ -2,7 +2,7 @@ pytest
 numpy
 onnx
 onnxruntime
-jax[cpu]
+jax[cpu]==0.3.0 # TODO: Fix the version because of call...
 isort
 mypy>=0.931 # For mypy-protobuf
 black
