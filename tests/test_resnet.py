@@ -86,6 +86,7 @@ def IdentityBlock(kernel_size, filters):
 # ResNet architectures compose layers and ResNet blocks
 
 
+# TODO: Commented out some layers because emitting full ResNet50 is too slow.
 def ResNet50(num_classes):
     return stax.serial(
         # TODO: HWCN is difficult to support
@@ -95,25 +96,25 @@ def ResNet50(num_classes):
         Relu,
         MaxPool((3, 3), strides=(2, 2)),
         ConvBlock(3, [64, 64, 256], strides=(1, 1)),
-        IdentityBlock(3, [64, 64]),
-        IdentityBlock(3, [64, 64]),
+        # IdentityBlock(3, [64, 64]),
+        # IdentityBlock(3, [64, 64]),
         ConvBlock(3, [128, 128, 512]),
-        IdentityBlock(3, [128, 128]),
-        IdentityBlock(3, [128, 128]),
-        IdentityBlock(3, [128, 128]),
-        ConvBlock(3, [256, 256, 1024]),
-        IdentityBlock(3, [256, 256]),
-        IdentityBlock(3, [256, 256]),
-        IdentityBlock(3, [256, 256]),
-        IdentityBlock(3, [256, 256]),
-        IdentityBlock(3, [256, 256]),
-        ConvBlock(3, [512, 512, 2048]),
-        IdentityBlock(3, [512, 512]),
-        IdentityBlock(3, [512, 512]),
-        # AvgPool((7, 7)),
-        # Flatten,
-        # Dense(num_classes),
-        # LogSoftmax,
+        # IdentityBlock(3, [128, 128]),
+        # IdentityBlock(3, [128, 128]),
+        # IdentityBlock(3, [128, 128]),
+        # ConvBlock(3, [256, 256, 1024]),
+        # IdentityBlock(3, [256, 256]),
+        # IdentityBlock(3, [256, 256]),
+        # IdentityBlock(3, [256, 256]),
+        # IdentityBlock(3, [256, 256]),
+        # IdentityBlock(3, [256, 256]),
+        # ConvBlock(3, [512, 512, 2048]),
+        # IdentityBlock(3, [512, 512]),
+        # IdentityBlock(3, [512, 512]),
+        AvgPool((7, 7)),
+        Flatten,
+        Dense(num_classes),
+        LogSoftmax,
     )
 
 
@@ -266,28 +267,24 @@ def test_bn():
     check_output(output_values, outputs[0], atol=1e-6)
 
 
+# TODO: This test fails because of too large ONNX.
+@pytest.mark.xfail
 def test_resnet():
     test_name = "resnet"
     rng_key = random.PRNGKey(0)
 
     batch_size = 8
     num_classes = 1001
-    # TODO: HWCN is difficult to support
-    # input_shape = (224, 224, 3, batch_size)
-    # input_shape = (batch_size, 224, 224, 3)
-    input_shape = (batch_size, 6, 6, 3)
+    image_size = 224
+    # TODO: HWCN is difficult to support.
+    # input_shape = (image_size, image_size, 3, batch_size)
+    input_shape = (batch_size, image_size, image_size, 3)
 
     init_fun, predict_fun = ResNet50(num_classes)
     _, init_params = init_fun(rng_key, input_shape)
-    # print(len(init_params[0]))
-    # init_params = [(jnp.ones(init_params[0][0].shape, dtype=init_params[0][0].dtype), jnp.ones(init_params[0][1].shape, dtype=init_params[0][1].dtype))]
-    # for p in init_params:
-    #     p.fill(1)
-    # print(init_params)
 
     rng = npr.RandomState(0)
     images = rng.rand(*input_shape).astype("float32")
-    # images = np.ones(input_shape, dtype=np.float32)
 
     fn = predict_fun
     input_values = [init_params, images]
@@ -296,8 +293,42 @@ def test_resnet():
     outputs = translate_and_run(fn, input_values, test_name)
 
     print(output_values.shape)
-    # check_output(output_values[0][0], outputs[0][0][0])
     check_output(output_values, outputs[0], atol=1e-3, rtol=1e-3)
+
+
+# TODO: This test fails because of too large ONNX.
+@pytest.mark.xfail
+def test_resnet_grad():
+    test_name = "resnet_grad"
+    rng_key = random.PRNGKey(0)
+
+    batch_size = 8
+    num_classes = 1001
+    image_size = 224
+    # TODO: HWCN is difficult to support.
+    # input_shape = (image_size, image_size, 3, batch_size)
+    input_shape = (batch_size, image_size, image_size, 3)
+    target_shape = (batch_size, num_classes)
+
+    init_fun, predict_fun = ResNet50(num_classes)
+    _, init_params = init_fun(rng_key, input_shape)
+
+    rng = npr.RandomState(0)
+    images = rng.rand(*input_shape).astype("float32")
+    targets = rng.rand(*target_shape).astype("float32")
+
+    def loss(params, batch):
+        inputs, targets = batch
+        preds = predict_fun(params, inputs)
+        return -jnp.mean(jnp.sum(preds * targets, axis=0))
+
+    fn = grad(loss)
+    input_values = [init_params, (images, targets)]
+
+    output_values = fn(*input_values)
+    outputs = translate_and_run(fn, input_values, test_name, exit_after_emit_hlo=True)
+
+    # check_output(output_values, outputs[0], atol=1e-3, rtol=1e-3)
 
 
 # if __name__ == "__main__":

@@ -60,7 +60,7 @@ def gen_onnx_inputs(onnx_name: str, input_values):
     return inputs
 
 
-def translate_and_run(fn, input_values, test_name):
+def translate_and_run(fn, input_values, test_name, exit_after_emit_hlo=False):
     onnx_name = test_name + ".onnx"
 
     # TODO(akawashiro): Use inline=True to remove call
@@ -73,12 +73,15 @@ def translate_and_run(fn, input_values, test_name):
         f.write(xla.as_hlo_dot_graph())
     dot_cmd = [
         "dot",
-        "-Tps",
+        "-Tsvg",
         test_name + "_as_hlo_dot_graph.dot",
         "-o",
-        test_name + "_as_hlo_dot_graph.ps",
+        test_name + "_as_hlo_dot_graph.svg",
     ]
     subprocess.run(dot_cmd)
+
+    if exit_after_emit_hlo:
+        return
 
     hlo_proto = xla.as_serialized_hlo_module_proto()
     with open(test_name + ".hlo_proto", "wb") as f:
