@@ -69,6 +69,30 @@ def test_mnist():
     check_output(output_values, outputs[0])
 
 
+def test_mnist_grad():
+    test_name = "mnist_grad"
+    init_random_params, predict = stax.serial(
+        Dense(1024), Relu, Dense(1024), Relu, Dense(10), LogSoftmax
+    )
+
+    def loss(params, batch):
+        inputs, targets = batch
+        preds = predict(params, inputs)
+        return -jnp.mean(jnp.sum(preds * targets, axis=0))
+
+    train_images, train_labels, test_images, test_labels = datasets.mnist()
+    rng = random.PRNGKey(0)
+    _, init_params = init_random_params(rng, (-1, 28 * 28))
+
+    fn = grad(loss)
+    input_values = [init_params, (train_images[0], train_labels[0])]
+
+    output_values = fn(*input_values)
+    outputs = translate_and_run(fn, input_values, test_name)
+
+    check_output(output_values, outputs[0])
+
+
 @pytest.mark.parametrize("shape", [(32, 32), (32, 64)])
 def test_add(shape):
     test_name = "add"
