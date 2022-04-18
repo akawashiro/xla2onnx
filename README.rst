@@ -5,7 +5,7 @@ Convert XLA to ONNX.
 - Install: `pip3 install -e .`
 - Format: `./format.sh`
 - Lint: `./lint.sh`
-- Run tests: `pytest`
+- Run tests: `python3 -m pytest`
 
 TODO
 ----
